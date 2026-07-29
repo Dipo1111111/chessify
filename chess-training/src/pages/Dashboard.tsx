@@ -25,9 +25,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen flex bg-paper">
+    <div className="min-h-screen flex bg-paper safe-top safe-bottom">
       {/* ═══ Sidebar ═══ */}
-      <aside className="w-56 shrink-0 flex flex-col min-h-screen bg-surface border-r border-border-light">
+      <aside className="w-56 shrink-0 flex flex-col min-h-screen bg-surface border-r border-border-light safe-top safe-left">
         {/* Brand */}
         <div className="px-6 pt-10 pb-8">
           <div className="w-8 h-0.5 mb-4 bg-brand" />
@@ -54,7 +54,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Footer */}
-        <div className="px-6 pb-8">
+        <div className="px-6 pb-8 safe-bottom">
           <p className="text-[10px] italic font-display text-taupe">
             One move at a time
           </p>
@@ -82,17 +82,17 @@ export default function Dashboard() {
                     </button>
                   )}
                 </div>
-                <h1 className="text-5xl font-semibold leading-tight font-display text-ink">
+                <h1 className="text-2xl font-semibold leading-tight font-display text-ink">
                   The Board
                 </h1>
-                <p className="text-lg mt-2 text-ink-soft">
+                <p className="text-sm mt-2 text-ink-soft">
                   {viewingDayData.dayOfWeek} &middot; {state.streak} day streak
                 </p>
               </div>
 
               {/* Right side */}
               <div className="text-right flex flex-col items-end gap-2">
-                <p className="text-2xl font-light font-display text-brand">
+                <p className="text-xl font-light font-display text-brand">
                   {roman}
                 </p>
                 <p className="text-xs text-ink-muted">
@@ -126,7 +126,7 @@ export default function Dashboard() {
               <p className="text-xs tracking-[0.15em] uppercase mb-1 text-ink-muted">
                 Today's study
               </p>
-              <p className="text-xl font-display text-ink">
+              <p className="text-base font-display text-ink">
                 {viewingDayData.puzzleTheme} / Double Attacks
               </p>
             </div>

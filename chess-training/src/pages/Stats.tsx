@@ -79,7 +79,7 @@ export default function Stats() {
       {/* ═══ Summary stats ═══ */}
       <div className="mb-14">
         <div className="w-12 h-0.5 mb-6 bg-brand" />
-        <h1 className="text-3xl font-semibold leading-tight font-display text-ink">
+        <h1 className="text-2xl font-semibold leading-tight font-display text-ink">
           Progress
         </h1>
         <p className="text-sm mt-1 text-ink-soft">

@@ -69,15 +69,15 @@ export default function Compare() {
   return (
     <div className="whiteboard-bg min-h-screen p-8">
       <div className="max-w-7xl mx-auto mb-12 text-center">
-        <h1 className="text-4xl font-bold text-[#2D2A24] mb-2 tracking-tight">
-          {'\u{1F3A8}'} Design Explorer
+        <h1 className="text-4xl font-bold text-ink mb-2 tracking-tight">
+          Design Explorer
         </h1>
-        <p className="text-lg text-[#6B6560] font-['Inter']">
+        <p className="text-lg text-ink-soft">
           Wabi-Sabi wins so far. One more contender before we commit.
         </p>
       </div>
 
-      <div className="relative max-w-7xl mx-auto" style={{ height: "80vh", minHeight: 600 }}>
+      <div className="relative max-w-7xl mx-auto h-[80vh] min-h-[600px]">
         <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -100,10 +100,7 @@ export default function Compare() {
           >
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-5 bg-[rgba(200,192,175,0.5)] rounded-sm z-10" />
 
-            <div
-              className="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 group-hover:-translate-y-1 overflow-hidden"
-              style={{ width: 300 }}
-            >
+            <div className="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 group-hover:-translate-y-1 overflow-hidden w-[300px]">
               <div className="h-2 flex">
                 {d.colors.map((c, i) => (
                   <div key={i} className="flex-1" style={{ backgroundColor: c }} />
@@ -111,11 +108,11 @@ export default function Compare() {
               </div>
 
               <div className="p-5 text-left">
-                <h2 className="text-xl font-bold text-[#2D2A24] mb-0.5">{d.title}</h2>
+                <h2 className="text-xl font-bold text-ink mb-0.5">{d.title}</h2>
                 <p className="text-sm text-[#8B8580] font-medium mb-2">{d.subtitle}</p>
-                <p className="text-sm text-[#6B6560] mb-3 leading-relaxed">{d.description}</p>
+                <p className="text-sm text-ink-soft mb-3 leading-relaxed">{d.description}</p>
 
-                <div className="flex items-center justify-between text-xs text-[#8B8580] border-t border-[#E8E4DE] pt-3">
+                <div className="flex items-center justify-between text-xs text-[#8B8580] border-t border-border-faint pt-3">
                   <span>{d.font}</span>
                   <span className="font-medium">{d.vibe}</span>
                 </div>

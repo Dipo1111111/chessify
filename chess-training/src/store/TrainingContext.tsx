@@ -164,25 +164,20 @@ function generateBlocks(): BlockData[] {
   }));
 }
 
-/** Calculate what day number the user is on based on their start date. */
-function calcTodayDayNumber(startDate: string): number {
-  const start = new Date(startDate + "T00:00:00");
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const diffMs = now.getTime() - start.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.min(60, diffDays + 1));
+/** Find the first day (from Day 1) that isn't fully completed.
+ *  This is the "current" day the user should be working on. */
+function firstUncompletedDay(days: DayData[]): number {
+  for (let i = 0; i < days.length; i++) {
+    if (!days[i].completed) return days[i].dayNumber;
+  }
+  return days.length; // all 60 days done — stay on the last one
 }
 
-/** Count consecutive completed days going backwards from `fromDay`.
- *  If fromDay itself is completed, include it. Otherwise start from yesterday. */
-function computeStreak(days: DayData[], fromDay: number): number {
-  const today = days.find((d) => d.dayNumber === fromDay);
-  const start = today?.completed ? fromDay : fromDay - 1;
+/** Count consecutive completed days from Day 1 — how far along the user is. */
+function computeStreak(days: DayData[]): number {
   let streak = 0;
-  for (let n = start; n >= 1; n--) {
-    const day = days.find((d) => d.dayNumber === n);
-    if (day?.completed) streak++;
+  for (let i = 0; i < days.length; i++) {
+    if (days[i].completed) streak++;
     else break;
   }
   return streak;
@@ -195,13 +190,13 @@ const STORAGE_KEY = "chess-training-state";
 function createInitialState(): TrainingState {
   const startDate = new Date().toISOString().split("T")[0];
   const days = generateAllDays();
-  const todayDay = calcTodayDayNumber(startDate);
+  // All days start uncompleted, so first uncompleted day is always 1
   return {
     startDate,
-    viewingDay: todayDay,
+    viewingDay: 1,
     days,
     blocks: generateBlocks(),
-    streak: computeStreak(days, todayDay),
+    streak: 0,
   };
 }
 
@@ -211,9 +206,9 @@ function loadState(): TrainingState {
     if (raw) {
       const parsed = JSON.parse(raw) as TrainingState;
       if (parsed.days?.length === 60 && parsed.startDate) {
-        // Recalculate today on every load
-        const todayDay = calcTodayDayNumber(parsed.startDate);
-        const streak = computeStreak(parsed.days, todayDay);
+        // Progress-based: first uncompleted day is "today"
+        const currentDay = firstUncompletedDay(parsed.days);
+        const streak = computeStreak(parsed.days);
 
         // Migrate old stockfishWins → consecutiveWins if needed
         const blocks = parsed.blocks.map((b) => {
@@ -232,7 +227,7 @@ function loadState(): TrainingState {
             gatePassed: b.gatePassed ?? b.consecutiveWins >= (b.winsNeeded || 5),
           };
         });
-        return { ...parsed, blocks, streak };
+        return { ...parsed, blocks, streak, viewingDay: currentDay };
       }
     }
   } catch {
@@ -275,9 +270,17 @@ function trainingReducer(
         return { ...day, tasks: newTasks, completed: newTasks.every((t) => t.completed) };
       });
 
-      const todayDay = calcTodayDayNumber(state.startDate);
-      const newStreak = computeStreak(newDays, todayDay);
-      return { ...state, days: newDays, streak: newStreak };
+      const newStreak = computeStreak(newDays);
+
+      // Auto-advance: if the day we just finished IS the day we were viewing,
+      // move viewingDay forward to the next uncompleted day
+      const toggledDay = newDays.find((d) => d.dayNumber === action.dayNumber);
+      const justFinished = toggledDay?.completed && action.dayNumber === state.viewingDay;
+      const newViewingDay = justFinished
+        ? firstUncompletedDay(newDays)
+        : state.viewingDay;
+
+      return { ...state, days: newDays, streak: newStreak, viewingDay: newViewingDay };
     }
 
     case "STOCKFISH_WIN": {
@@ -306,8 +309,8 @@ function trainingReducer(
     }
 
     case "GO_TODAY": {
-      const todayDay = calcTodayDayNumber(state.startDate);
-      return { ...state, viewingDay: todayDay };
+      const currentDay = firstUncompletedDay(state.days);
+      return { ...state, viewingDay: currentDay };
     }
 
     case "IMPORT_STATE": {
@@ -315,9 +318,9 @@ function trainingReducer(
       if (!imported.days || imported.days.length !== 60 || !imported.startDate) {
         return state; // invalid — refuse
       }
-      const todayDay = calcTodayDayNumber(imported.startDate);
-      const streak = computeStreak(imported.days, todayDay);
-      return { ...imported, streak, viewingDay: todayDay, blocks: imported.blocks };
+      const currentDay = firstUncompletedDay(imported.days);
+      const streak = computeStreak(imported.days);
+      return { ...imported, streak, viewingDay: currentDay, blocks: imported.blocks };
     }
 
     default:
@@ -344,7 +347,8 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     saveState(state);
   }, [state]);
 
-  const todayDay = calcTodayDayNumber(state.startDate);
+  // "Today" = the first day the user hasn't fully completed
+  const todayDay = firstUncompletedDay(state.days);
   const viewingDayData = state.days.find((d) => d.dayNumber === state.viewingDay);
   const viewingBlock = state.blocks.find(
     (b) => state.viewingDay >= b.dayStart && state.viewingDay <= b.dayEnd
