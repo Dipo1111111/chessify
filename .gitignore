@@ -1,0 +1,4 @@
+node_modules/
+chess-training/node_modules/
+chess-training/dist/
+*.tsbuildinfo
