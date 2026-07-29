@@ -87,7 +87,7 @@
   }
 }
 
-/* Mobile: narrower page padding, full-bleed content */
+/* Mobile: narrower page padding */
 @media (max-width: 768px) {
   .page-container {
     @apply px-5 py-8;

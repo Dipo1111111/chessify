@@ -77,7 +77,7 @@ export default function Stats() {
   return (
     <div className="page-container">
       {/* ═══ Summary stats ═══ */}
-      <div className="mb-14">
+      <div className="mb-10 md:mb-14">
         <div className="w-12 h-0.5 mb-6 bg-brand" />
         <h1 className="text-2xl font-semibold leading-tight font-display text-ink">
           Progress
@@ -87,15 +87,15 @@ export default function Stats() {
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-14">
+      {/* Stat cards — stack on mobile, 3 cols on md+ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-10 md:mb-14">
         <StatCard label="Days Done" value={`${completedDays}/${totalDays}`} />
         <StatCard label="Tasks Done" value={`${completedTasks}/${totalTasks}`} />
         <StatCard label="Streak" value={`${state.streak} days`} />
       </div>
 
       {/* Block gate statuses */}
-      <div className="mb-14">
+      <div className="mb-10 md:mb-14">
         <p className="text-xs tracking-[0.15em] uppercase mb-4 text-ink-muted">
           Block Gates
         </p>
@@ -106,23 +106,23 @@ export default function Stats() {
               <div
                 key={block.id}
                 className={cn(
-                  "flex items-center justify-between px-4 py-3",
+                  "flex items-center justify-between px-3 md:px-4 py-3 gap-2",
                   isCurrent
                     ? "bg-brand-light border border-brand"
                     : "bg-transparent border border-border-faint"
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-ink">
+                <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-3 min-w-0">
+                  <span className="text-sm font-medium text-ink truncate">
                     {block.label}
                   </span>
-                  <span className="text-xs text-ink-muted">
+                  <span className="text-[10px] md:text-xs text-ink-muted truncate">
                     {block.theme}
                   </span>
                 </div>
                 <span
                   className={cn(
-                    "text-xs",
+                    "text-xs shrink-0",
                     block.gatePassed
                       ? "text-brand font-semibold"
                       : "text-taupe font-normal"
@@ -139,19 +139,23 @@ export default function Stats() {
       </div>
 
       {/* ═══ 30-Day Heatmap ═══ */}
-      <div className="mb-14">
+      <div className="mb-10 md:mb-14">
         <p className="text-xs tracking-[0.15em] uppercase mb-4 text-ink-muted">
           30-Day Heatmap
         </p>
-        <MiniCalendar
-          days={state.days}
-          viewingDay={state.viewingDay}
-          todayDay={todayDay}
-          onSelectDay={(n) =>
-            dispatch({ type: "SET_VIEWING_DAY", dayNumber: n })
-          }
-        />
-        <div className="flex items-center gap-4 mt-3">
+        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+          <div className="min-w-[280px]">
+            <MiniCalendar
+              days={state.days}
+              viewingDay={state.viewingDay}
+              todayDay={todayDay}
+              onSelectDay={(n) =>
+                dispatch({ type: "SET_VIEWING_DAY", dayNumber: n })
+              }
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 md:gap-4 mt-3">
           <Legend color="bg-brand" label="Complete" />
           <Legend color="bg-brand-pale" label="Partial" />
           <Legend color="bg-today-bg" label="Today" />
@@ -160,26 +164,26 @@ export default function Stats() {
       </div>
 
       {/* ═══ Data management ═══ */}
-      <div className="pt-8 border-t border-border-faint">
+      <div className="pt-6 md:pt-8 border-t border-border-faint">
         <p className="text-xs tracking-[0.15em] uppercase mb-4 text-ink-muted">
           Data
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleExport}
-            className="text-xs uppercase tracking-[0.1em] px-4 py-2 transition-all hover:opacity-70 text-paper bg-brand"
+            className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all hover:opacity-70 text-paper bg-brand"
           >
             Export Data
           </button>
           <button
             onClick={handleImport}
-            className="text-xs uppercase tracking-[0.1em] px-4 py-2 transition-all hover:opacity-70 text-brand border border-brand"
+            className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all hover:opacity-70 text-brand border border-brand"
           >
             Import Data
           </button>
           <button
             onClick={handleReset}
-            className="text-xs uppercase tracking-[0.1em] px-4 py-2 transition-all hover:opacity-70 text-taupe"
+            className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all hover:opacity-70 text-taupe"
           >
             Reset All
           </button>

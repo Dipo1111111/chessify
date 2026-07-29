@@ -8,6 +8,7 @@ export default function Dashboard() {
     useTraining();
   const [tab, setTab] = useState<"board" | "stats">("board");
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!viewingDayData || !viewingBlock) {
     return (
@@ -25,12 +26,40 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen flex bg-paper safe-top safe-bottom">
-      {/* ═══ Sidebar ═══ */}
-      <aside className="w-56 shrink-0 flex flex-col min-h-screen bg-surface border-r border-border-light safe-top safe-left">
+    <div className="min-h-screen flex bg-paper safe-top safe-bottom relative">
+      {/* ═══ Mobile menu backdrop ═══ */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* ═══ Sidebar (desktop: normal, mobile: overlay drawer) ═══ */}
+      <aside
+        className={cn(
+          "shrink-0 flex flex-col bg-surface border-r border-border-light safe-top safe-left",
+          "w-56",
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out",
+          "md:relative md:translate-x-0 md:z-auto md:min-h-screen",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         {/* Brand */}
         <div className="px-6 pt-10 pb-8">
-          <div className="w-8 h-0.5 mb-4 bg-brand" />
+          <div className="flex items-center justify-between md:justify-start">
+            <div className="w-8 h-0.5 mb-4 bg-brand md:mb-4" />
+            {/* Close button — mobile only */}
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden text-ink-muted hover:text-ink transition-colors p-1"
+              aria-label="Close menu"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
           <h2 className="text-lg font-semibold font-display text-ink">
             Chess Training
           </h2>
@@ -44,12 +73,12 @@ export default function Dashboard() {
           <SidebarTab
             label="The Board"
             active={tab === "board"}
-            onClick={() => setTab("board")}
+            onClick={() => { setTab("board"); setMobileMenuOpen(false); }}
           />
           <SidebarTab
             label="Stats"
             active={tab === "stats"}
-            onClick={() => setTab("stats")}
+            onClick={() => { setTab("stats"); setMobileMenuOpen(false); }}
           />
         </nav>
 
@@ -63,10 +92,43 @@ export default function Dashboard() {
 
       {/* ═══ Main content ═══ */}
       <main className="flex-1 min-w-0">
+
+        {/* ═══ Mobile top bar (hamburger + title) — shared across tabs ═══ */}
+        <div className="flex items-center gap-3 mb-8 md:hidden px-10 pt-6">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="shrink-0 p-1 -ml-1 text-ink-muted hover:text-ink transition-colors"
+            aria-label="Open menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+              {tab === "board"
+                ? `Day ${state.viewingDay} · ${state.streak} day streak`
+                : `${state.days.filter(d => d.completed).length}/${tab === "stats" ? 60 : 60} days`
+              }
+            </p>
+            <h1 className="text-lg font-semibold font-display text-ink truncate">
+              {tab === "board" ? "The Board" : "Progress"}
+            </h1>
+          </div>
+          {tab === "board" && !isToday && (
+            <button
+              onClick={() => dispatch({ type: "GO_TODAY" })}
+              className="text-[10px] uppercase tracking-[0.15em] px-2 py-0.5 rounded text-paper bg-brand shrink-0"
+            >
+              Today
+            </button>
+          )}
+        </div>
+
         {tab === "board" ? (
           <div className="page-container">
-            {/* ═══ Header ═══ */}
-            <div className="flex items-start justify-between mb-16">
+            {/* ═══ Desktop header ═══ */}
+            <div className="hidden md:flex items-start justify-between mb-16">
               <div>
                 <div className="w-12 h-0.5 mb-6 bg-brand" />
                 <div className="flex items-center gap-3">
@@ -121,12 +183,36 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* ═══ Mobile prev/next nav ═══ */}
+            <div className="flex items-center justify-between mb-8 md:hidden">
+              <button
+                onClick={() => dispatch({ type: "SET_VIEWING_DAY", dayNumber: state.viewingDay - 1 })}
+                disabled={state.viewingDay <= 1}
+                className="text-xs tracking-wider uppercase transition-opacity disabled:opacity-20 hover:opacity-60 text-brand"
+              >
+                ← Prev
+              </button>
+              <div className="text-center">
+                <p className="text-lg font-light font-display text-brand">{roman}</p>
+                <p className="text-[10px] text-ink-muted">
+                  {viewingBlock.label} &middot; {state.viewingDay}/{viewingBlock.dayEnd}
+                </p>
+              </div>
+              <button
+                onClick={() => dispatch({ type: "SET_VIEWING_DAY", dayNumber: state.viewingDay + 1 })}
+                disabled={state.viewingDay >= 60}
+                className="text-xs tracking-wider uppercase transition-opacity disabled:opacity-20 hover:opacity-60 text-brand"
+              >
+                Next →
+              </button>
+            </div>
+
             {/* ═══ Today's theme ═══ */}
-            <div className="mb-14 inline-block border-b-2 border-brand pb-2">
-              <p className="text-xs tracking-[0.15em] uppercase mb-1 text-ink-muted">
+            <div className="mb-10 md:mb-14 inline-block border-b-2 border-brand pb-2">
+              <p className="text-[10px] md:text-xs tracking-[0.15em] uppercase mb-1 text-ink-muted">
                 Today's study
               </p>
-              <p className="text-base font-display text-ink">
+              <p className="text-sm md:text-base font-display text-ink">
                 {viewingDayData.puzzleTheme} / Double Attacks
               </p>
             </div>
@@ -138,19 +224,19 @@ export default function Dashboard() {
                 return (
                   <div key={task.id} className="group">
                     {/* Task row */}
-                    <div className="flex items-start gap-6 py-4">
+                    <div className="flex items-start gap-3 md:gap-6 py-4">
                       {/* Roman numeral — click to expand */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleExpand(task.id);
                         }}
-                        className="shrink-0 mt-0.5 transition-all hover:scale-110 text-left min-w-[28px]"
+                        className="shrink-0 mt-0.5 transition-all hover:scale-110 text-left min-w-[20px] md:min-w-[28px]"
                         title="Click for details"
                       >
                         <span
                           className={cn(
-                            "text-lg font-light font-display transition-all",
+                            "text-base md:text-lg font-light font-display transition-all",
                             isExpanded
                               ? "text-brand border-b border-brand"
                               : task.completed
@@ -173,17 +259,17 @@ export default function Dashboard() {
                           })
                         }
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-0">
                           <h3
                             className={cn(
-                              "text-lg",
+                              "text-sm md:text-lg",
                               task.completed ? "text-taupe line-through" : "text-ink"
                             )}
                           >
                             {task.title}
                           </h3>
                           <span
-                            className="text-xs font-medium text-ink-muted"
+                            className="text-[10px] md:text-xs font-medium text-ink-muted"
                             dangerouslySetInnerHTML={{ __html: task.detail }}
                           />
                         </div>
@@ -196,7 +282,7 @@ export default function Dashboard() {
                       {/* Check circle */}
                       <button
                         className={cn(
-                          "w-6 h-6 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors",
+                          "w-5 h-5 md:w-6 md:h-6 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors",
                           task.completed
                             ? "border-brand bg-brand"
                             : "border-border-lighter bg-transparent"
@@ -210,7 +296,7 @@ export default function Dashboard() {
                         }
                       >
                         {task.completed && (
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <svg width="8" height="8" viewBox="0 0 10 10" fill="none" className="md:w-[10px] md:h-[10px]">
                             <path
                               d="M2 5L4 7L8 3"
                               stroke="#F8F6F3"
@@ -227,10 +313,10 @@ export default function Dashboard() {
                     <div
                       className={cn(
                         "overflow-hidden transition-all duration-300 ease-in-out",
-                        isExpanded ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
+                        isExpanded ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
                       )}
                     >
-                      <div className="ml-[60px] mb-5 p-5 text-sm leading-relaxed bg-surface text-ink-soft">
+                      <div className="ml-[28px] md:ml-[60px] mb-5 p-4 md:p-5 text-sm leading-relaxed bg-surface text-ink-soft">
                         <TaskDetail type={task.type} theme={viewingDayData.puzzleTheme} blockTheme={viewingBlock.theme} />
                       </div>
                     </div>
@@ -243,8 +329,8 @@ export default function Dashboard() {
             <BlockGate block={viewingBlock} dispatch={dispatch} />
 
             {/* ═══ Footer ═══ */}
-            <div className="mt-16 text-center">
-              <p className="text-sm leading-relaxed italic font-display text-taupe">
+            <div className="mt-12 md:mt-16 text-center">
+              <p className="text-xs md:text-sm leading-relaxed italic font-display text-taupe">
                 One move at a time
               </p>
             </div>
@@ -317,14 +403,14 @@ function TaskDetail({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-start gap-2">
-        <span className="text-xs uppercase tracking-[0.1em] text-brand font-medium min-w-10">
+      <div className="flex flex-col md:flex-row md:items-start gap-1 md:gap-2">
+        <span className="text-[10px] md:text-xs uppercase tracking-[0.1em] text-brand font-medium md:min-w-10">
           Goal
         </span>
         <span className="text-xs">{d.goal}</span>
       </div>
-      <div className="flex items-start gap-2">
-        <span className="text-xs uppercase tracking-[0.1em] text-brand font-medium min-w-10">
+      <div className="flex flex-col md:flex-row md:items-start gap-1 md:gap-2">
+        <span className="text-[10px] md:text-xs uppercase tracking-[0.1em] text-brand font-medium md:min-w-10">
           Focus
         </span>
         <span className="text-xs">{d.focus}</span>
@@ -347,43 +433,43 @@ function BlockGate({
   const needed = block.winsNeeded;
 
   return (
-    <div className="mt-14 pt-8">
+    <div className="mt-10 md:mt-14 pt-6 md:pt-8">
       <p className="text-xs tracking-[0.15em] uppercase mb-4 text-ink-muted">
         Block Gate
       </p>
 
       <div
         className={cn(
-          "p-6",
+          "p-4 md:p-6",
           gatePassed ? "bg-brand-light border border-brand" : "bg-surface border border-border-light"
         )}
       >
         {/* Title */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2 md:gap-0">
           <div>
             <p className="text-sm font-medium text-ink">
               {block.label} &middot; {block.theme}
             </p>
-            <p className="text-xs mt-0.5 text-ink-muted">
+            <p className="text-[10px] md:text-xs mt-0.5 text-ink-muted">
               {gatePassed
                 ? "Gate cleared — next block unlocked"
                 : `Win ${needed} Stockfish games in a row to unlock next block`}
             </p>
           </div>
           {gatePassed && (
-            <span className="text-xs uppercase tracking-[0.1em] px-3 py-1 text-paper bg-brand">
+            <span className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 py-1 text-paper bg-brand self-start md:self-auto">
               Passed
             </span>
           )}
         </div>
 
         {/* 5-box win tracker */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-1.5 md:gap-2 mb-4">
           {Array.from({ length: needed }, (_, i) => (
             <div
               key={i}
               className={cn(
-                "flex-1 h-12 flex items-center justify-center text-base transition-all",
+                "flex-1 h-8 md:h-12 flex items-center justify-center text-sm md:text-base transition-all",
                 i < currentWins
                   ? "bg-brand text-paper border-none"
                   : "bg-transparent text-taupe border border-border-lighter"
@@ -395,8 +481,8 @@ function BlockGate({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-ink-muted">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
+          <p className="text-[10px] md:text-xs text-ink-muted">
             {gatePassed
               ? "All gates cleared for this block"
               : currentWins > 0
@@ -408,13 +494,13 @@ function BlockGate({
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_LOSS", blockId: block.id })}
                 disabled={currentWins === 0}
-                className="text-xs uppercase tracking-[0.1em] px-4 py-2 transition-all disabled:opacity-25 hover:opacity-70 text-taupe border border-border-lighter"
+                className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all disabled:opacity-25 hover:opacity-70 text-taupe border border-border-lighter"
               >
                 ✕ Loss
               </button>
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_WIN", blockId: block.id })}
-                className="text-xs uppercase tracking-[0.1em] px-4 py-2 transition-all hover:opacity-80 text-paper bg-brand"
+                className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all hover:opacity-80 text-paper bg-brand"
               >
                 + Win
               </button>
