@@ -120,7 +120,7 @@ export default function Dashboard() {
               onClick={() => dispatch({ type: "GO_TODAY" })}
               className="text-[10px] uppercase tracking-[0.15em] px-2 py-0.5 rounded text-paper bg-brand shrink-0"
             >
-              Today
+              Jump to today
             </button>
           )}
         </div>
@@ -140,7 +140,7 @@ export default function Dashboard() {
                       onClick={() => dispatch({ type: "GO_TODAY" })}
                       className="text-[10px] uppercase tracking-[0.15em] px-2 py-0.5 rounded transition-opacity hover:opacity-70 text-paper bg-brand"
                     >
-                      Today
+                      Jump to today
                     </button>
                   )}
                 </div>
@@ -207,10 +207,10 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ═══ Today's theme ═══ */}
+            {/* ═══ Day's theme ═══ */}
             <div className="mb-10 md:mb-14 inline-block border-b-2 border-brand pb-2">
               <p className="text-[10px] md:text-xs tracking-[0.15em] uppercase mb-1 text-ink-muted">
-                Today's study
+                {isToday ? "Today's study" : `Day ${state.viewingDay} study`}
               </p>
               <p className="text-sm md:text-base font-display text-ink">
                 {viewingDayData.puzzleTheme} / Double Attacks

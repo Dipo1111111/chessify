@@ -14,8 +14,9 @@ export default function MiniCalendar({
   todayDay,
   onSelectDay,
 }: MiniCalendarProps) {
-  // Show the 30 days leading up to and including todayDay
-  const endDay = todayDay;
+  // Show 30 days (trailing window centered at todayDay).
+  // Always show at least a full calendar's worth of days.
+  const endDay = Math.min(Math.max(todayDay, 30), 60);
   const startDay = Math.max(1, endDay - 29);
   const range: DayData[] = [];
   for (let n = startDay; n <= endDay; n++) {
