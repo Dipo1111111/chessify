@@ -94,7 +94,7 @@ export default function Dashboard() {
       <main className="flex-1 min-w-0">
 
         {/* ═══ Mobile top bar (hamburger + title) — shared across tabs ═══ */}
-        <div className="flex items-center gap-3 mb-8 md:hidden px-10 pt-6">
+        <div className="flex items-center gap-3 mb-8 md:hidden px-5 sm:px-4 pt-6">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="shrink-0 p-1 -ml-1 text-ink-muted hover:text-ink transition-colors"
@@ -425,12 +425,15 @@ function BlockGate({
   block,
   dispatch,
 }: {
-  block: { id: string; label: string; theme: string; consecutiveWins: number; winsNeeded: number; gatePassed: boolean };
+  block: { id: string; label: string; theme: string; consecutiveWins: number; winsNeeded: number; gatePassed: boolean; gamesToday: number; gamesTodayDay: number; maxDailyGames: number };
   dispatch: React.Dispatch<any>;
 }) {
   const gatePassed = block.gatePassed;
   const currentWins = block.consecutiveWins;
   const needed = block.winsNeeded;
+  const dailyGames = block.gamesToday;
+  const dailyCap = block.maxDailyGames;
+  const atDailyCap = dailyGames >= dailyCap;
 
   return (
     <div className="mt-10 md:mt-14 pt-6 md:pt-8">
@@ -482,25 +485,35 @@ function BlockGate({
 
         {/* Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
-          <p className="text-[10px] md:text-xs text-ink-muted">
-            {gatePassed
-              ? "All gates cleared for this block"
-              : currentWins > 0
-                ? `${currentWins} consecutive win${currentWins > 1 ? "s" : ""} — a loss resets to 0`
-                : "No wins recorded yet. Beat Stockfish to start your streak."}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] md:text-xs text-ink-muted">
+              {gatePassed
+                ? "All gates cleared for this block"
+                : atDailyCap
+                  ? `Daily limit reached — ${dailyCap}/${dailyCap} games today, come back tomorrow`
+                  : currentWins > 0
+                    ? `${currentWins} consecutive win${currentWins > 1 ? "s" : ""} — a loss resets to 0`
+                    : "No wins recorded yet. Beat Stockfish to start your streak."}
+            </p>
+            {!gatePassed && (
+              <p className="text-[10px] text-ink-muted/60">
+                {dailyGames}/{dailyCap} gate games played today
+              </p>
+            )}
+          </div>
           {!gatePassed && (
             <div className="flex gap-2">
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_LOSS", blockId: block.id })}
-                disabled={currentWins === 0}
+                disabled={currentWins === 0 || atDailyCap}
                 className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all disabled:opacity-25 hover:opacity-70 text-taupe border border-border-lighter"
               >
                 ✕ Loss
               </button>
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_WIN", blockId: block.id })}
-                className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all hover:opacity-80 text-paper bg-brand"
+                disabled={atDailyCap}
+                className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all disabled:opacity-25 hover:opacity-80 text-paper bg-brand"
               >
                 + Win
               </button>

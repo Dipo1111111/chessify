@@ -40,6 +40,12 @@ export interface BlockData {
   winsNeeded: number;
   /** Whether this block's Stockfish gate has been passed */
   gatePassed: boolean;
+  /** How many gate games played on the current training day */
+  gamesToday: number;
+  /** The training day number that gamesToday was last reset against */
+  gamesTodayDay: number;
+  /** Max gate games allowed per training day (10) */
+  maxDailyGames: number;
 }
 
 export interface TrainingState {
@@ -161,6 +167,9 @@ function generateBlocks(): BlockData[] {
     consecutiveWins: 0,
     winsNeeded: 5,
     gatePassed: false,
+    gamesToday: 0,
+    gamesTodayDay: 1,
+    maxDailyGames: 10,
   }));
 }
 
@@ -212,20 +221,23 @@ function loadState(): TrainingState {
 
         // Migrate old stockfishWins → consecutiveWins if needed
         const blocks = parsed.blocks.map((b) => {
-          const old = b as BlockData & { stockfishWins?: number };
-          if (old.stockfishWins !== undefined && old.consecutiveWins === undefined) {
-            return {
-              ...b,
-              consecutiveWins: old.stockfishWins,
-              winsNeeded: b.winsNeeded || 5,
-              gatePassed: old.stockfishWins >= (b.winsNeeded || 5),
-            };
-          }
-          return {
-            ...b,
-            winsNeeded: b.winsNeeded || 5,
-            gatePassed: b.gatePassed ?? b.consecutiveWins >= (b.winsNeeded || 5),
+          const block = b as BlockData & { stockfishWins?: number };
+          // Add daily gate fields if missing (migration from v1)
+          const migrated: BlockData = {
+            ...block,
+            consecutiveWins: block.consecutiveWins ?? 0,
+            winsNeeded: block.winsNeeded || 5,
+            gatePassed: block.gatePassed ?? block.consecutiveWins >= (block.winsNeeded || 5),
+            gamesToday: block.gamesToday ?? 0,
+            gamesTodayDay: block.gamesTodayDay ?? currentDay,
+            maxDailyGames: block.maxDailyGames ?? 10,
           };
+          // Handle old stockfishWins field
+          if (block.stockfishWins !== undefined && block.consecutiveWins === undefined) {
+            migrated.consecutiveWins = block.stockfishWins;
+            migrated.gatePassed = block.stockfishWins >= (migrated.winsNeeded || 5);
+          }
+          return migrated;
         });
         return { ...parsed, blocks, streak, viewingDay: currentDay };
       }
@@ -272,34 +284,41 @@ function trainingReducer(
 
       const newStreak = computeStreak(newDays);
 
-      // Auto-advance: if the day we just finished IS the day we were viewing,
-      // move viewingDay forward to the next uncompleted day
-      const toggledDay = newDays.find((d) => d.dayNumber === action.dayNumber);
-      const justFinished = toggledDay?.completed && action.dayNumber === state.viewingDay;
-      const newViewingDay = justFinished
-        ? firstUncompletedDay(newDays)
-        : state.viewingDay;
-
-      return { ...state, days: newDays, streak: newStreak, viewingDay: newViewingDay };
+      return { ...state, days: newDays, streak: newStreak };
     }
 
     case "STOCKFISH_WIN": {
+      const todayDay = firstUncompletedDay(state.days);
       const newBlocks = state.blocks.map((block) => {
-        if (block.id !== action.blockId) return block;
+        if (block.id !== action.blockId || block.gatePassed) return block;
+        // Reset daily counter if the training day rolled over
+        const gamesToday = block.gamesTodayDay !== todayDay ? 0 : block.gamesToday;
+        if (gamesToday >= block.maxDailyGames) return block; // daily cap reached
         const newWins = block.consecutiveWins + 1;
         return {
           ...block,
           consecutiveWins: newWins,
           gatePassed: newWins >= block.winsNeeded,
+          gamesToday: gamesToday + 1,
+          gamesTodayDay: todayDay,
         };
       });
       return { ...state, blocks: newBlocks };
     }
 
     case "STOCKFISH_LOSS": {
+      const todayDay = firstUncompletedDay(state.days);
       const newBlocks = state.blocks.map((block) => {
-        if (block.id !== action.blockId) return block;
-        return { ...block, consecutiveWins: 0 };
+        if (block.id !== action.blockId || block.gatePassed) return block;
+        // Reset daily counter if the training day rolled over
+        const gamesToday = block.gamesTodayDay !== todayDay ? 0 : block.gamesToday;
+        if (gamesToday >= block.maxDailyGames) return block; // daily cap reached
+        return {
+          ...block,
+          consecutiveWins: 0,
+          gamesToday: gamesToday + 1,
+          gamesTodayDay: todayDay,
+        };
       });
       return { ...state, blocks: newBlocks };
     }
