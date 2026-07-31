@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { cn } from "../lib/utils";
-import { useTraining } from "../store/TrainingContext";
+import { useTraining, type GateInfo } from "../store/TrainingContext";
 import Stats from "./Stats";
 
 export default function Dashboard() {
-  const { state, dispatch, viewingDayData, viewingBlock, todayDay } =
+  const { state, dispatch, viewingDayData, viewingBlock, todayDay, currentGate } =
     useTraining();
   const [tab, setTab] = useState<"board" | "stats">("board");
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export default function Dashboard() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted">
               {tab === "board"
                 ? `Day ${state.viewingDay} · ${state.streak} day streak`
-                : `${state.days.filter(d => d.completed).length}/${tab === "stats" ? 60 : 60} days`
+                : `${state.days.filter(d => d.completed).length}/60 days`
               }
             </p>
             <h1 className="text-lg font-semibold font-display text-ink truncate">
@@ -213,7 +213,7 @@ export default function Dashboard() {
                 {isToday ? "Today's study" : `Day ${state.viewingDay} study`}
               </p>
               <p className="text-sm md:text-base font-display text-ink">
-                {viewingDayData.puzzleTheme} / Double Attacks
+                {viewingDayData.puzzleTheme}
               </p>
             </div>
 
@@ -221,6 +221,7 @@ export default function Dashboard() {
             <div className="space-y-1">
               {viewingDayData.tasks.map((task, i) => {
                 const isExpanded = expandedTask === task.id;
+                const isSparring = task.type === "sparring";
                 return (
                   <div key={task.id} className="group">
                     {/* Task row */}
@@ -239,25 +240,28 @@ export default function Dashboard() {
                             "text-base md:text-lg font-light font-display transition-all",
                             isExpanded
                               ? "text-brand border-b border-brand"
-                              : task.completed
-                                ? "text-taupe opacity-40"
-                                : "text-brand opacity-75"
+                              : isSparring
+                                ? "text-brand opacity-75"
+                                : task.completed
+                                  ? "text-taupe opacity-40"
+                                  : "text-brand opacity-75"
                           )}
                         >
                           {toRoman(i + 1)}
                         </span>
                       </button>
 
-                      {/* Content — click to toggle completion */}
+                      {/* Content — click to toggle completion (sparring is gate-driven, not clickable) */}
                       <div
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() =>
+                        className={cn("flex-1 min-w-0", !isSparring && "cursor-pointer")}
+                        onClick={() => {
+                          if (isSparring) return;
                           dispatch({
                             type: "TOGGLE_TASK",
                             dayNumber: state.viewingDay,
                             taskId: task.id,
-                          })
-                        }
+                          });
+                        }}
                       >
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-0">
                           <h3
@@ -268,10 +272,14 @@ export default function Dashboard() {
                           >
                             {task.title}
                           </h3>
-                          <span
-                            className="text-[10px] md:text-xs font-medium text-ink-muted"
-                            dangerouslySetInnerHTML={{ __html: task.detail }}
-                          />
+                          {isSparring ? (
+                            <SparringMeta gate={currentGate} />
+                          ) : (
+                            <span
+                              className="text-[10px] md:text-xs font-medium text-ink-muted"
+                              dangerouslySetInnerHTML={{ __html: task.detail }}
+                            />
+                          )}
                         </div>
                         {/* Hover underline (only when not expanded) */}
                         {!isExpanded && (
@@ -279,34 +287,38 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      {/* Check circle */}
-                      <button
-                        className={cn(
-                          "w-5 h-5 md:w-6 md:h-6 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors",
-                          task.completed
-                            ? "border-brand bg-brand"
-                            : "border-border-lighter bg-transparent"
-                        )}
-                        onClick={() =>
-                          dispatch({
-                            type: "TOGGLE_TASK",
-                            dayNumber: state.viewingDay,
-                            taskId: task.id,
-                          })
-                        }
-                      >
-                        {task.completed && (
-                          <svg width="8" height="8" viewBox="0 0 10 10" fill="none" className="md:w-[10px] md:h-[10px]">
-                            <path
-                              d="M2 5L4 7L8 3"
-                              stroke="#F8F6F3"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </button>
+                      {/* Status slot — check circle for manual tasks, gate chip for sparring */}
+                      {isSparring ? (
+                        <SparringStatus gate={currentGate} />
+                      ) : (
+                        <button
+                          className={cn(
+                            "w-5 h-5 md:w-6 md:h-6 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors",
+                            task.completed
+                              ? "border-brand bg-brand"
+                              : "border-border-lighter bg-transparent"
+                          )}
+                          onClick={() =>
+                            dispatch({
+                              type: "TOGGLE_TASK",
+                              dayNumber: state.viewingDay,
+                              taskId: task.id,
+                            })
+                          }
+                        >
+                          {task.completed && (
+                            <svg width="8" height="8" viewBox="0 0 10 10" fill="none" className="md:w-[10px] md:h-[10px]">
+                              <path
+                                d="M2 5L4 7L8 3"
+                                stroke="#F8F6F3"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                     </div>
 
                     {/* Expandable detail area */}
@@ -326,7 +338,7 @@ export default function Dashboard() {
             </div>
 
             {/* ═══ Block Gate ═══ */}
-            <BlockGate block={viewingBlock} dispatch={dispatch} />
+            <BlockGate gate={currentGate} dispatch={dispatch} />
 
             {/* ═══ Footer ═══ */}
             <div className="mt-12 md:mt-16 text-center">
@@ -382,20 +394,20 @@ function TaskDetail({
 }) {
   const details: Record<string, { goal: string; focus: string }> = {
     puzzles: {
-      goal: `Solve puzzles from the Lichess ${theme} folder. 30 min timer.`,
-      focus: "Pattern recognition. Sort by rating, aim for 90%+ accuracy.",
+      goal: `30 minutes in the Lichess ${theme} folder (or Chess.com custom puzzles).`,
+      focus: "No guessing. Calculate the entire solution in your head before you move a piece.",
     },
     matches: {
-      goal: "Play 2 rapid games (15+10 time control). Full focus, no distractions.",
-      focus: `Apply ${theme} patterns in real positions. Review each game immediately.`,
+      goal: "Exactly 2 rapid games at 15+10. No bullet or blitz.",
+      focus: "Run the CCT loop on every opponent move: why did they go there, does it check/capture/threaten, is my target square safe?",
     },
     analysis: {
-      goal: "Review both games from today's session. Find 3 critical moments per game.",
-      focus: "Use Lichess analysis board. Note what you missed and why.",
+      goal: "10 minutes (5 per match), straight after each game — before queueing again.",
+      focus: "Find the move where the eval bar plummets. Name your error out loud, then check with the engine.",
     },
     sparring: {
-      goal: `Practice ${blockTheme} positions vs Stockfish. Level 5.`,
-      focus: "Play solid moves, calculate deeply. Accuracy over speed.",
+      goal: `30 minutes vs Stockfish at maximum level (8 / 3200+) — ${blockTheme}.`,
+      focus: "Win 5 in a row on the current position to advance. A loss, draw, or stalemate resets the counter.",
     },
   };
 
@@ -419,21 +431,84 @@ function TaskDetail({
   );
 }
 
+// ═══ S P A R R I N G   R O W   H E L P E R S ════════════════════════
+
+/** Right-side text for the sparring row — shows the live gate position. */
+function SparringMeta({ gate }: { gate: GateInfo | null }) {
+  if (!gate) {
+    return (
+      <span className="text-[10px] md:text-xs font-medium text-ink-muted">
+        All positions passed
+      </span>
+    );
+  }
+  const { current } = gate;
+  return (
+    <span className="text-[10px] md:text-xs font-medium text-ink-muted">
+      Position {current.positionNumber} &middot; {current.data.consecutiveWins}/{current.data.winsNeeded}
+    </span>
+  );
+}
+
+/** Replaces the check circle on the sparring row — gate status, not a checkbox. */
+function SparringStatus({ gate }: { gate: GateInfo | null }) {
+  if (!gate) {
+    return (
+      <span className="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-brand bg-brand shrink-0 mt-0.5 flex items-center justify-center">
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" className="md:w-[10px] md:h-[10px]">
+          <path
+            d="M2 5L4 7L8 3"
+            stroke="#F8F6F3"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  const { current } = gate;
+  return (
+    <span className="shrink-0 mt-0.5 text-[10px] md:text-xs font-medium border border-border-lighter text-ink-muted px-1.5 py-0.5 rounded-sm">
+      {current.data.consecutiveWins}/{current.data.winsNeeded}
+    </span>
+  );
+}
+
 // ═══ B L O C K   G A T E ═════════════════════════════════════════════
 
 function BlockGate({
-  block,
+  gate,
   dispatch,
 }: {
-  block: { id: string; label: string; theme: string; consecutiveWins: number; winsNeeded: number; gatePassed: boolean; gamesToday: number; gamesTodayDay: number; maxDailyGames: number };
+  gate: GateInfo | null;
   dispatch: React.Dispatch<any>;
 }) {
-  const gatePassed = block.gatePassed;
-  const currentWins = block.consecutiveWins;
-  const needed = block.winsNeeded;
+  if (!gate) {
+    return (
+      <div className="mt-10 md:mt-14 pt-6 md:pt-8">
+        <p className="text-xs tracking-[0.15em] uppercase mb-4 text-ink-muted">
+          Block Gate
+        </p>
+        <div className="p-4 md:p-6 bg-brand-light border border-brand">
+          <p className="text-sm font-medium text-ink">All blocks cleared</p>
+          <p className="text-[10px] md:text-xs mt-0.5 text-ink-muted">
+            Every Stockfish position is passed — the gate is complete.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { block, blockConfig, current } = gate;
   const dailyGames = block.gamesToday;
   const dailyCap = block.maxDailyGames;
   const atDailyCap = dailyGames >= dailyCap;
+  const winLabel = blockConfig.winLabel ?? "Win";
+  const lossLabel = blockConfig.lossLabel ?? "Loss";
+  const { data, config } = current;
+  const wins = data.consecutiveWins;
+  const needed = data.winsNeeded;
 
   return (
     <div className="mt-10 md:mt-14 pt-6 md:pt-8">
@@ -441,12 +516,7 @@ function BlockGate({
         Block Gate
       </p>
 
-      <div
-        className={cn(
-          "p-4 md:p-6",
-          gatePassed ? "bg-brand-light border border-brand" : "bg-surface border border-border-light"
-        )}
-      >
+      <div className="p-4 md:p-6 bg-surface border border-border-light">
         {/* Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2 md:gap-0">
           <div>
@@ -454,74 +524,163 @@ function BlockGate({
               {block.label} &middot; {block.theme}
             </p>
             <p className="text-[10px] md:text-xs mt-0.5 text-ink-muted">
-              {gatePassed
-                ? "Gate cleared — next block unlocked"
-                : `Win ${needed} Stockfish games in a row to unlock next block`}
+              Beat Stockfish at maximum level (8 / 3200+) to clear each position
             </p>
           </div>
-          {gatePassed && (
-            <span className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 py-1 text-paper bg-brand self-start md:self-auto">
-              Passed
-            </span>
-          )}
+          <span className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 py-1 text-paper bg-brand self-start md:self-auto">
+            Active
+          </span>
         </div>
 
-        {/* 5-box win tracker */}
-        <div className="flex gap-1.5 md:gap-2 mb-4">
-          {Array.from({ length: needed }, (_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex-1 h-8 md:h-12 flex items-center justify-center text-sm md:text-base transition-all",
-                i < currentWins
-                  ? "bg-brand text-paper border-none"
-                  : "bg-transparent text-taupe border border-border-lighter"
-              )}
-            >
-              {i < currentWins ? "✓" : i + 1}
-            </div>
-          ))}
+        {/* Position progress list */}
+        <div className="mb-4 space-y-1">
+          {block.positions.map((p, i) => {
+            const cfg = blockConfig.positions[i];
+            const isCurrent = i === current.positionIndex;
+            return (
+              <div
+                key={cfg.id}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 gap-2",
+                  isCurrent ? "bg-brand-pale" : "bg-transparent"
+                )}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-[10px] font-display font-light text-taupe shrink-0">
+                    P{i + 1}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] md:text-xs truncate",
+                      p.passed
+                        ? "text-taupe line-through"
+                        : isCurrent
+                          ? "text-ink"
+                          : "text-taupe"
+                    )}
+                  >
+                    {cfg.name}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] md:text-xs shrink-0",
+                    p.passed
+                      ? "text-brand"
+                      : isCurrent
+                        ? "text-ink-soft"
+                        : "text-taupe"
+                  )}
+                >
+                  {p.passed
+                    ? "✓ Passed"
+                    : isCurrent
+                      ? `${p.consecutiveWins}/${p.winsNeeded}`
+                      : "Locked"}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
-          <div className="flex flex-col gap-1">
-            <p className="text-[10px] md:text-xs text-ink-muted">
-              {gatePassed
-                ? "All gates cleared for this block"
-                : atDailyCap
-                  ? `Daily limit reached — ${dailyCap}/${dailyCap} games today, come back tomorrow`
-                  : currentWins > 0
-                    ? `${currentWins} consecutive win${currentWins > 1 ? "s" : ""} — a loss resets to 0`
-                    : "No wins recorded yet. Beat Stockfish to start your streak."}
+        {/* Current position detail */}
+        <div className="border-t border-border-light pt-4">
+          <p className="text-sm font-medium text-ink">
+            Position {current.positionNumber} &middot; {config.name}
+          </p>
+          {config.setupNote && (
+            <p className="text-[10px] md:text-xs mt-1 text-ink-muted">
+              {config.setupNote}
             </p>
-            {!gatePassed && (
+          )}
+          <p className="text-[10px] md:text-xs mt-1 text-ink-soft">{config.goal}</p>
+
+          {/* FEN copy */}
+          <div className="flex items-center gap-2 mt-3">
+            <code className="text-[10px] md:text-xs bg-paper border border-border-light px-2 py-1.5 flex-1 min-w-0 truncate text-ink-soft">
+              {config.fen}
+            </code>
+            <CopyFen fen={config.fen} />
+          </div>
+
+          {/* 5-box win tracker */}
+          <div className="flex gap-1.5 md:gap-2 mt-4">
+            {Array.from({ length: needed }, (_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex-1 h-8 md:h-12 flex items-center justify-center text-sm md:text-base transition-all",
+                  i < wins
+                    ? "bg-brand text-paper border-none"
+                    : "bg-transparent text-taupe border border-border-lighter"
+                )}
+              >
+                {i < wins ? "✓" : i + 1}
+              </div>
+            ))}
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0 mt-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] md:text-xs text-ink-muted">
+                {atDailyCap
+                  ? `Daily limit reached — ${dailyCap}/${dailyCap} games today, come back tomorrow`
+                  : wins > 0
+                    ? `${wins} consecutive ${winLabel.toLowerCase()}s — a ${lossLabel.toLowerCase()} resets to 0`
+                    : "No progress yet. Beat Stockfish to start your streak."}
+              </p>
               <p className="text-[10px] text-ink-muted/60">
                 {dailyGames}/{dailyCap} gate games played today
               </p>
-            )}
-          </div>
-          {!gatePassed && (
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_LOSS", blockId: block.id })}
-                disabled={currentWins === 0 || atDailyCap}
+                disabled={wins === 0 || atDailyCap}
                 className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all disabled:opacity-25 hover:opacity-70 text-taupe border border-border-lighter"
               >
-                ✕ Loss
+                ✕ {lossLabel}
               </button>
               <button
                 onClick={() => dispatch({ type: "STOCKFISH_WIN", blockId: block.id })}
                 disabled={atDailyCap}
                 className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 md:px-4 py-2 transition-all disabled:opacity-25 hover:opacity-80 text-paper bg-brand"
               >
-                + Win
+                + {winLabel}
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// ═══ C O P Y   F E N ════════════════════════════════════════════════
+
+function CopyFen({ fen }: { fen: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard
+      ?.writeText(fen)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {
+        // clipboard unavailable — ignore
+      });
+  };
+
+  return (
+    <button
+      onClick={copy}
+      className="text-[10px] md:text-xs uppercase tracking-[0.1em] px-3 py-1.5 text-brand border border-brand shrink-0 transition-opacity hover:opacity-70"
+    >
+      {copied ? "Copied" : "Copy FEN"}
+    </button>
   );
 }
 

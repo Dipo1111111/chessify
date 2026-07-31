@@ -102,6 +102,14 @@ export default function Stats() {
         <div className="space-y-2">
           {state.blocks.map((block) => {
             const isCurrent = block.id === currentBlock?.id;
+            const passedCount = block.positions.filter((p) => p.passed).length;
+            const totalPositions = block.positions.length;
+            const activePos = block.positions.find((p) => !p.passed);
+            const status = block.gatePassed
+              ? "✓ Passed"
+              : activePos && activePos.consecutiveWins > 0
+                ? `${passedCount}/${totalPositions} positions · ${activePos.consecutiveWins}/${activePos.winsNeeded}`
+                : `${passedCount}/${totalPositions} positions`;
             return (
               <div
                 key={block.id}
@@ -128,9 +136,7 @@ export default function Stats() {
                       : "text-taupe font-normal"
                   )}
                 >
-                  {block.gatePassed
-                    ? "✓ Passed"
-                    : `${block.consecutiveWins}/${block.winsNeeded}`}
+                  {status}
                 </span>
               </div>
             );
